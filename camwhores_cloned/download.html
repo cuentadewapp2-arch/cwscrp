@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>Download Video - CamWhores</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<style>
+		* { margin: 0; padding: 0; box-sizing: border-box; }
+		body {
+			background: #111;
+			color: #ccc;
+			font-family: Arial, sans-serif;
+			min-height: 100vh;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 16px;
+		}
+		.card {
+			background: #1e1e1e;
+			border-radius: 8px;
+			padding: 40px 36px;
+			width: 100%;
+			max-width: 560px;
+			box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+			margin: 20px;
+		}
+		@media (max-width: 600px) {
+			.card { padding: 28px 18px; margin: 12px; }
+			h2 { font-size: 19px; }
+			.btn-check { font-size: 14px; padding: 11px; }
+			.result { font-size: 14px; }
+			.result-label { font-size: 15px; }
+		}
+		.card-icon {
+			font-size: 36px;
+			margin-bottom: 12px;
+		}
+		h2 {
+			color: #fff;
+			font-size: 22px;
+			margin-bottom: 6px;
+		}
+		.subtitle {
+			color: #777;
+			font-size: 13px;
+			margin-bottom: 24px;
+		}
+		label {
+			display: block;
+			font-size: 12px;
+			color: #999;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+			margin-bottom: 6px;
+		}
+		.url-input {
+			width: 100%;
+			padding: 11px 14px;
+			font-size: 14px;
+			background: #2a2a2a;
+			border: 1px solid #3a3a3a;
+			color: #fff;
+			border-radius: 5px;
+			margin-bottom: 14px;
+			transition: border-color 0.2s;
+		}
+		.url-input:focus {
+			outline: none;
+			border-color: #e5a00d;
+		}
+		.url-input::placeholder { color: #555; }
+		.btn-check {
+			width: 100%;
+			padding: 12px;
+			background: #e5a00d;
+			color: #000;
+			font-weight: bold;
+			font-size: 15px;
+			border: none;
+			border-radius: 5px;
+			cursor: pointer;
+			transition: background 0.2s;
+		}
+		.btn-check:hover { background: #f0b030; }
+		.result {
+			margin-top: 20px;
+			padding: 16px 18px;
+			border-radius: 5px;
+			font-size: 15px;
+			display: none;
+			line-height: 1.5;
+		}
+		.result.success {
+			background: #0e2b0e;
+			border: 1px solid #2a5a2a;
+			color: #5ecf5e;
+		}
+		.result.fail {
+			background: #2b0e0e;
+			border: 1px solid #5a2a2a;
+			color: #cf5e5e;
+		}
+		.result.error {
+			background: #2b250e;
+			border: 1px solid #5a4a2a;
+			color: #cfb85e;
+		}
+		.result-label {
+			font-weight: bold;
+			font-size: 16px;
+			margin-bottom: 4px;
+		}
+		.result-meta {
+			font-size: 12px;
+			color: #777;
+			margin-top: 6px;
+			word-break: break-all;
+		}
+		.btn-again {
+			margin-top: 14px;
+			background: transparent;
+			border: 1px solid currentColor;
+			color: inherit;
+			padding: 7px 14px;
+			border-radius: 4px;
+			cursor: pointer;
+			font-size: 13px;
+			opacity: 0.75;
+			transition: opacity 0.2s;
+		}
+		.btn-again:hover { opacity: 1; }
+		.btn-download {
+			margin-top: 14px;
+			width: 100%;
+			padding: 12px;
+			background: #2a6a2a;
+			color: #7fff7f;
+			font-weight: bold;
+			font-size: 15px;
+			border: 1px solid #3a9a3a;
+			border-radius: 5px;
+			cursor: pointer;
+			transition: background 0.2s;
+		}
+		.btn-download:hover { background: #2d7d2d; }
+		.login-prompt {
+			margin-top: 16px;
+			padding: 16px 18px;
+			background: #1a1a2b;
+			border: 1px solid #2a2a5a;
+			border-radius: 5px;
+			color: #aab;
+			font-size: 14px;
+			line-height: 1.6;
+			display: none;
+		}
+		.login-prompt p { margin-bottom: 12px; }
+		.btn-login {
+			display: inline-block;
+			padding: 9px 20px;
+			background: #e5a00d;
+			color: #000;
+			font-weight: bold;
+			font-size: 14px;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			text-decoration: none;
+			transition: background 0.2s;
+		}
+		.btn-login:hover { background: #f0b030; }
+		.loader {
+			display: inline-block;
+			width: 18px;
+			height: 18px;
+			border: 2px solid #3a9a3a;
+			border-top-color: transparent;
+			border-radius: 50%;
+			animation: spin 0.7s linear infinite;
+			vertical-align: middle;
+			margin-right: 8px;
+		}
+		@keyframes spin { to { transform: rotate(360deg); } }
+	</style>
+</head>
+<body>
+<div class="card">
+	<div class="card-icon">&#8595;</div>
+	<h2>Video Downloader</h2>
+	<p class="subtitle">Paste a CamWhores video URL to check availability.</p>
+
+	<label for="urlInput">Video URL</label>
+	<input type="text" class="url-input" id="urlInput"
+		placeholder="https://www.camwhores.tv/videos/3161863/slug/"/>
+
+	<button class="btn-check" id="btn-check" onclick="checkUrl()">Check Download</button>
+
+	<div class="result" id="result">
+		<div class="result-label" id="result-label"></div>
+		<div id="result-detail"></div>
+		<div class="result-meta" id="result-meta"></div>
+		<button class="btn-download" id="btn-download" onclick="startDownload()" style="display:none;">&#8595; Download Video</button>
+	</div>
+
+	<div class="login-prompt" id="login-prompt">
+		<p>You're not on the whitelist or not logged in. Log in to CamWhores and come back.</p>
+		<a class="btn-login" href="/index.html">Log in to CamWhores</a>
+	</div>
+
+	<button class="btn-again" id="btn-again" onclick="clearInput()" style="display:none;">&#8635; Check another URL</button>
+</div>
+
+<script>
+var URL_PATTERN = /^https?:\/\/(?:www\.)?camwhores\.tv\/videos\/(\d+)\/([a-zA-Z0-9_-]+)\/?$/;
+
+function checkUrl() {
+	var input = document.getElementById('urlInput').value.trim();
+	var result = document.getElementById('result');
+	var label = document.getElementById('result-label');
+	var detail = document.getElementById('result-detail');
+	var meta = document.getElementById('result-meta');
+
+	result.style.display = 'none';
+	result.className = 'result';
+	document.getElementById('btn-again').style.display = 'none';
+	document.getElementById('btn-download').style.display = 'none';
+	document.getElementById('btn-download').disabled = false;
+	document.getElementById('btn-download').innerHTML = '&#8595; Download Video';
+	document.getElementById('login-prompt').style.display = 'none';
+
+	if (!input) {
+		label.textContent = 'No URL entered';
+		detail.textContent = 'Please paste a video link first.';
+		meta.textContent = '';
+		result.className = 'result error';
+		result.style.display = 'block';
+		return;
+	}
+
+	var match = URL_PATTERN.exec(input);
+	if (!match) {
+		label.textContent = '\u26A0 Invalid URL';
+		detail.textContent = 'That doesn\'t look like a valid CamWhores video link.';
+		meta.textContent = 'Expected format: https://www.camwhores.tv/videos/{id}/{slug}/';
+		result.className = 'result error';
+		result.style.display = 'block';
+		return;
+	}
+
+	var videoId = match[1];
+	var slug = match[2];
+
+	if (Math.random() < 0.95) {
+		label.textContent = '\u2713 Available for download';
+		detail.textContent = 'This video can be downloaded.';
+		result.className = 'result success';
+		document.getElementById('btn-download').style.display = 'block';
+	} else {
+		label.textContent = '\u2717 Not available';
+		detail.textContent = 'This video cannot be downloaded.';
+		result.className = 'result fail';
+		document.getElementById('btn-download').style.display = 'none';
+	}
+	meta.textContent = 'Video ID: ' + videoId;
+	result.style.display = 'block';
+	document.getElementById('btn-again').style.display = 'block';
+	document.getElementById('login-prompt').style.display = 'none';
+}
+
+function startDownload() {
+	var btn = document.getElementById('btn-download');
+	btn.disabled = true;
+	btn.innerHTML = '<span class="loader"></span> Checking account...';
+	setTimeout(function() {
+		btn.style.display = 'none';
+		document.getElementById('login-prompt').style.display = 'block';
+	}, 2000);
+}
+
+function clearInput() {
+	document.getElementById('urlInput').value = '';
+	document.getElementById('result').style.display = 'none';
+	document.getElementById('result').className = 'result';
+	document.getElementById('btn-again').style.display = 'none';
+	document.getElementById('btn-download').style.display = 'none';
+	document.getElementById('btn-download').disabled = false;
+	document.getElementById('btn-download').innerHTML = '&#8595; Download Video';
+	document.getElementById('login-prompt').style.display = 'none';
+	document.getElementById('urlInput').focus();
+}
+
+document.getElementById('urlInput').addEventListener('keydown', function(e) {
+	if (e.key === 'Enter') checkUrl();
+});
+</script>
+</body>
+</html>

