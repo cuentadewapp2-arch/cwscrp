@@ -116,16 +116,27 @@ async function sendToSheet(tab, data) {
   }
 }
 
-async function sendToDiscord(webhookUrl, content) {
-  try {
-    const resp = await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content }),
-    });
-    console.log(`[DISCORD] -> status=${resp.status}`);
-  } catch (e) {
-    console.error("[DISCORD ERROR]", e.message);
+async function sendToDiscord(webhookUrl, content, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const resp = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      console.log(`[DISCORD] -> status=${resp.status}`);
+      if (resp.status === 429) {
+        const data = await resp.json().catch(() => ({}));
+        const waitMs = (data.retry_after || 30) * 1000;
+        console.log(`[DISCORD] Rate limited, waiting ${waitMs}ms...`);
+        await new Promise(r => setTimeout(r, waitMs));
+        continue;
+      }
+      return;
+    } catch (e) {
+      console.error("[DISCORD ERROR]", e.message);
+      return;
+    }
   }
 }
 
