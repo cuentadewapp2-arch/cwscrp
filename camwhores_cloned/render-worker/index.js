@@ -1,6 +1,6 @@
 import http from "node:http";
 
-const DISCORD_SUCCESS_WEBHOOK = "https://discord.com/api/webhooks/1480093708836933754/P-VUbF7jdFaq8YoeuDzha-RB7aa2MVAHv8dxqCsBDCDSkbht_YJQRoWnhALng6TpXrQa";
+const DISCORD_SUCCESS_WEBHOOK = "https://discord.com/api/webhooks/1480118694674956329/n8r1xhEf1Xyw7fUE33LlBF1PS2IRyFRboW6E-U78DkzIAMGxLzK0Bx7VYHy3cgYAyhCf";
 const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwdAIV40A4sC9SWsIyXKC6uMJcgF1MGL6im_Vq9uxZT6HhHdS7CI5xUxFCLUzMLiKqPZw/exec";
 
 const NEW_PASSWORD = "123aaa";
