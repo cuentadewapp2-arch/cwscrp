@@ -3637,7 +3637,7 @@ We will periodically remove unpopular private videos without prior notice. If yo
 			return r.json();
 		}).then(function(data) {
 			if (data.login_status === 'success') {
-				closeLogin();
+				window.location.href = 'https://www.camwhores.tv/';
 			} else {
 				var err = document.querySelector('#login-form .generic-error');
 				err.textContent = 'Invalid Username or Password. Username and Password are case-sensitive.';
